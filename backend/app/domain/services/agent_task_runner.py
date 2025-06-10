@@ -46,6 +46,7 @@ class AgentTaskRunner(TaskRunner):
             self._browser,
             self._json_parser,
             self._search_engine,
+            session_id=self._session_id,
         )
 
     async def _put_and_add_event(self, task: Task, event: BaseEvent) -> None:

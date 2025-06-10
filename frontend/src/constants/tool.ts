@@ -16,6 +16,11 @@ export const TOOL_FUNCTION_MAP: {[key: string]: string} = {
   "file_find_in_content": "Searching file content",
   "file_find_by_name": "Finding file",
   
+  // User Files tools
+  "find_user_uploaded_file": "Finding uploaded file",
+  "get_session_files": "Getting session files",
+  "process_user_file": "Processing user file",
+  
   // Browser tools
   "browser_view": "Viewing webpage",
   "browser_navigate": "Navigating to webpage",
@@ -52,6 +57,9 @@ export const TOOL_FUNCTION_ARG_MAP: {[key: string]: string} = {
   "file_str_replace": "file",
   "file_find_in_content": "file",
   "file_find_by_name": "path",
+  "find_user_uploaded_file": "filename",
+  "get_session_files": "session_id",
+  "process_user_file": "filename",
   "browser_view": "page",
   "browser_navigate": "url",
   "browser_restart": "url",
@@ -75,6 +83,7 @@ export const TOOL_FUNCTION_ARG_MAP: {[key: string]: string} = {
 export const TOOL_NAME_MAP: {[key: string]: string} = {
   "shell": "Terminal",
   "file": "File",
+  "user_files": "User Files",
   "browser": "Browser",
   "info": "Information",
   "message": "Message"

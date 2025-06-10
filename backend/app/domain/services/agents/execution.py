@@ -20,6 +20,7 @@ from app.domain.services.tools.browser import BrowserTool
 from app.domain.services.tools.search import SearchTool
 from app.domain.services.tools.file import FileTool
 from app.domain.services.tools.message import MessageTool
+from app.domain.services.tools.user_files import UserFilesTool
 from app.domain.utils.json_parser import JsonParser
 
 
@@ -40,23 +41,31 @@ class ExecutionAgent(BaseAgent):
         browser: Browser,
         json_parser: JsonParser,
         search_engine: Optional[SearchEngine] = None,
+        session_id: Optional[str] = None,
     ):
+        # Initialize tools list
+        tools_list = [
+            ShellTool(sandbox),
+            BrowserTool(browser),
+            FileTool(sandbox),
+            MessageTool()
+        ]
+        
+        # Add UserFilesTool with session_id context
+        if session_id:
+            tools_list.append(UserFilesTool(session_id=session_id))
+        
+        # Only add search tool when search_engine is not None
+        if search_engine:
+            tools_list.append(SearchTool(search_engine))
+            
         super().__init__(
             agent_id=agent_id,
             agent_repository=agent_repository,
             llm=llm,
             json_parser=json_parser,
-            tools=[
-                ShellTool(sandbox),
-                BrowserTool(browser),
-                FileTool(sandbox),
-                MessageTool()
-            ]
+            tools=tools_list
         )
-        
-        # Only add search tool when search_engine is not None
-        if search_engine:
-            self.tools.append(SearchTool(search_engine))
     
     async def execute_step(self, plan: Plan, step: Step) -> AsyncGenerator[BaseEvent, None]:
         message = EXECUTION_PROMPT.format(goal=plan.goal, step=step.description)

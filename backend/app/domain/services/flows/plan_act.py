@@ -40,6 +40,7 @@ class PlanActFlow(BaseFlow):
         browser: Browser,
         json_parser: JsonParser,
         search_engine: Optional[SearchEngine] = None,
+        session_id: Optional[str] = None,
     ):
         self._agent_id = agent_id
         self._repository = agent_repository
@@ -62,6 +63,7 @@ class PlanActFlow(BaseFlow):
             browser=browser,
             json_parser=json_parser,
             search_engine=search_engine,
+            session_id=session_id,
         )
         logger.debug(f"Created execution agent for Agent {self._agent_id}")
 

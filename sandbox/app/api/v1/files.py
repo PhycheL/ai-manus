@@ -19,10 +19,10 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/files", tags=["files"])
+router = APIRouter(tags=["files"])
 
 # 工作目录
-WORKSPACE_DIR = "/workspace"
+WORKSPACE_DIR = "/tmp/workspace"  # 使用/tmp目录，通常有写权限
 DATA_DIR = os.path.join(WORKSPACE_DIR, "data")
 SCREENSHOTS_DIR = os.path.join(WORKSPACE_DIR, "screenshots")
 
@@ -67,7 +67,7 @@ async def process_file(request: FileProcessRequest) -> FileProcessResponse:
     
     try:
         # 下载文件
-        file_path = await download_file(request.download_url, request.file_id)
+        file_path = await download_file(request.download_url, request.file_id, request.options.get("filename"))
         
         # 根据处理类型处理文件
         if request.process_type == "extract_text":
@@ -239,20 +239,48 @@ async def sync_to_backend(request: FileSyncRequest) -> Dict[str, Any]:
 
 # 辅助函数
 
-async def download_file(url: str, file_id: str) -> str:
+async def download_file(url: str, file_id: str, filename: Optional[str] = None) -> str:
     """下载文件到本地"""
-    file_path = os.path.join(DATA_DIR, f"{file_id}_download")
-    
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as resp:
             if resp.status != 200:
                 raise Exception(f"Failed to download file: {resp.status}")
             
+            # 如果没有提供文件名，尝试从响应头中提取
+            if not filename:
+                # 从Content-Disposition头中提取文件名
+                content_disposition = resp.headers.get('Content-Disposition', '')
+                if 'filename=' in content_disposition:
+                    # 解析Content-Disposition: attachment; filename="filename.ext"
+                    import re
+                    match = re.search(r'filename="([^"]+)"', content_disposition)
+                    if match:
+                        filename = match.group(1)
+                    else:
+                        # 处理没有引号的情况
+                        match = re.search(r'filename=([^;]+)', content_disposition)
+                        if match:
+                            filename = match.group(1).strip()
+                
+                # 如果还是没有文件名，尝试从URL中提取
+                if not filename:
+                    from urllib.parse import unquote, urlparse
+                    parsed_url = urlparse(url)
+                    if parsed_url.path:
+                        filename = os.path.basename(unquote(parsed_url.path))
+                
+                # 如果还是没有文件名，使用file_id
+                if not filename or filename == '/':
+                    filename = f"{file_id}_download"
+            
+            file_path = os.path.join(DATA_DIR, filename)
+            
             async with aiofiles.open(file_path, 'wb') as f:
                 async for chunk in resp.content.iter_chunked(8192):
                     await f.write(chunk)
-    
-    return file_path
+            
+            logger.info(f"Downloaded file to: {file_path}")
+            return file_path
 
 
 async def extract_text(file_path: str, options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
