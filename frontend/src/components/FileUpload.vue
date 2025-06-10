@@ -27,7 +27,7 @@
           </p>
           <p v-else class="primary-text">正在上传文件...</p>
           <p class="secondary-text">
-            支持 TXT, CSV, JSON, PDF, DOC, XLS, JPG, PNG 等格式，最大 50MB
+            支持所有文件格式（包括未知类型），最大 50MB
           </p>
         </div>
       </div>
@@ -68,6 +68,16 @@
             <div class="file-meta">
               {{ formatFileSize(file.size) }} • {{ file.mime_type }}
             </div>
+            <div v-if="isUnknownFileType(file)" class="unknown-file-actions">
+              <button 
+                class="analyze-btn"
+                @click.stop="analyzeUnknownFileType(file.file_id)"
+                :disabled="file.analyzing"
+                title="分析文件类型"
+              >
+                {{ file.analyzing ? '分析中...' : '智能分析' }}
+              </button>
+            </div>
           </div>
           <button 
             class="delete-btn"
@@ -97,7 +107,7 @@ import { API_CONFIG } from '../api/client'
 
 export default {
   name: 'FileUpload',
-  emits: ['file-uploaded', 'file-selected'],
+  emits: ['file-uploaded', 'file-selected', 'file-analyzed'],
   setup(props, { emit }) {
     const isDragOver = ref(false)
     const isUploading = ref(false)
@@ -159,19 +169,22 @@ export default {
         return `文件 "${file.name}" 超过 50MB 大小限制`
       }
       
-      const allowedExtensions = [
+      // 已知支持的文件扩展名
+      const knownExtensions = [
         '.txt', '.csv', '.json', '.pdf', '.doc', '.docx', 
         '.xls', '.xlsx', '.jpg', '.jpeg', '.png', '.gif',
         '.py', '.js', '.html', '.css', '.java', '.cpp', '.c', '.xml', '.md'
       ]
       
       const fileName = file.name.toLowerCase()
-      const isAllowed = allowedExtensions.some(ext => fileName.endsWith(ext))
+      const isKnownType = knownExtensions.some(ext => fileName.endsWith(ext))
       
-      if (!isAllowed) {
-        return `不支持的文件类型: "${file.name}"`
+      // 对于未知文件类型，只提示但不阻止上传
+      if (!isKnownType) {
+        console.log(`未知文件类型，将进行智能分析: "${file.name}"`)
       }
       
+      // 所有文件都允许上传（除了大小限制）
       return null
     }
     
@@ -289,6 +302,60 @@ export default {
       return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
     }
     
+    // 判断是否为未知文件类型
+    const isUnknownFileType = (file) => {
+      const knownMimeTypes = [
+        'application/pdf', 'application/msword', 
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'text/plain', 'text/html', 'text/markdown',
+        'image/jpeg', 'image/png', 'image/gif', 'image/bmp', 'image/webp',
+        'application/json', 'application/xml', 'text/csv',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed'
+      ]
+      
+      return file.mime_type === 'application/octet-stream' || 
+             !knownMimeTypes.includes(file.mime_type)
+    }
+    
+    // 分析未知文件类型
+    const analyzeUnknownFileType = async (fileId) => {
+      try {
+        const file = uploadedFiles.value.find(f => f.file_id === fileId)
+        if (!file) return
+        
+        file.analyzing = true
+        
+        const backendUrl = getBackendUrl()
+        const response = await axios.post(`${backendUrl}/api/v1/files/${fileId}/analyze-unknown-type`)
+        
+        if (response.data.success) {
+          const analysis = response.data.data.analysis
+          
+          // 显示分析结果
+          alert(`文件类型分析结果：
+文件类型：${analysis.file_type_description}
+处理策略：${analysis.processing_strategy}
+推荐工具：${analysis.recommended_tools.join(', ')}
+期望输出：${analysis.expected_output}`)
+          
+          // 可以在这里触发进一步的处理
+          emit('file-analyzed', { fileId, analysis })
+        } else {
+          errorMessage.value = response.data.message || '文件分析失败'
+        }
+      } catch (error) {
+        console.error('分析文件类型失败:', error)
+        errorMessage.value = error.response?.data?.detail || '文件分析失败，请重试'
+      } finally {
+        const file = uploadedFiles.value.find(f => f.file_id === fileId)
+        if (file) {
+          file.analyzing = false
+        }
+      }
+    }
+    
     onMounted(() => {
       loadUploadedFiles()
     })
@@ -307,7 +374,9 @@ export default {
       handleDrop,
       handleFileSelect,
       deleteFile,
-      formatFileSize
+      formatFileSize,
+      isUnknownFileType,
+      analyzeUnknownFileType
     }
   }
 }
@@ -484,5 +553,31 @@ export default {
   border-radius: 6px;
   color: #dc2626;
   font-size: 14px;
+}
+
+.unknown-file-actions {
+  margin-top: 8px;
+}
+
+.analyze-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.analyze-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+  transform: translateY(-1px);
+}
+
+.analyze-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 </style> 
