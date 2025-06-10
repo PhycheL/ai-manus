@@ -79,6 +79,9 @@ class Settings(BaseSettings):
     gridfs_bucket_name: str = "files"
     file_chunk_size: int = 255 * 1024  # 255KB
     
+    # 未知文件类型支持
+    allow_unknown_file_types: bool = True  # 是否允许上传未知文件类型
+    
     # Logging configuration
     log_level: str = "INFO"
     

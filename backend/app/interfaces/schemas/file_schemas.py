@@ -12,6 +12,22 @@ class FileUploadResponse(BaseModel):
     upload_time: datetime
 
 
+class UnknownFileAnalysisResponse(BaseModel):
+    """未知文件类型分析响应"""
+    file_type_description: str
+    processing_strategy: str
+    recommended_tools: List[str]
+    processing_steps: List[str]
+    expected_output: str
+
+
+class FileAnalysisResult(BaseModel):
+    """文件分析结果"""
+    file_id: str
+    filename: str
+    analysis: UnknownFileAnalysisResponse
+
+
 class FileInfo(BaseModel):
     """文件信息"""
     file_id: str

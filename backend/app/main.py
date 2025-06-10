@@ -64,7 +64,8 @@ file_service = None
 
 def create_file_service() -> FileService:
     return FileService(
-        file_repository=GridFSFileRepository(get_mongodb().client[settings.mongodb_database])
+        file_repository=GridFSFileRepository(get_mongodb().client[settings.mongodb_database]),
+        llm=OpenAILLM()
     )
 
 def get_file_service_instance() -> FileService:

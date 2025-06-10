@@ -1,14 +1,16 @@
 import logging
 from typing import List, Dict, Any, Optional, BinaryIO
-from datetime import datetime
+from datetime import datetime, UTC
 from io import BytesIO
 
 from fastapi import UploadFile
 from app.domain.models.file import File, FileSource, ProcessingStatus
 from app.domain.repositories.file_repository import FileRepository
 from app.domain.external.file_processor import FileProcessor, ProcessType
+from app.domain.external.llm import LLM
 from app.infrastructure.config import get_settings
 from app.application.errors.exceptions import NotFoundError, ValidationError, ServerError
+from app.application.services.unknown_file_analyzer import UnknownFileAnalyzer
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -61,16 +63,19 @@ class FileService:
     
     def __init__(self, 
                  file_repository: FileRepository,
-                 file_processor: Optional[FileProcessor] = None):
+                 file_processor: Optional[FileProcessor] = None,
+                 llm: Optional[LLM] = None):
         """
         初始化文件服务
         
         Args:
             file_repository: 文件仓储
             file_processor: 文件处理器（可选）
+            llm: LLM接口（可选，用于未知文件类型分析）
         """
         self.file_repository = file_repository
         self.file_processor = file_processor
+        self.unknown_file_analyzer = UnknownFileAnalyzer(llm) if llm else None
         logger.info("FileService initialized")
     
     async def upload_file(self, 
@@ -489,8 +494,17 @@ class FileService:
         
         # 检查文件类型
         content_type = file.content_type or self._guess_content_type(file.filename)
-        if content_type not in settings.allowed_file_types:
+        
+        # 如果是已知的允许类型，直接通过
+        if content_type in settings.allowed_file_types:
+            return
+            
+        # 如果不允许未知文件类型，则拒绝
+        if not settings.allow_unknown_file_types:
             raise ValidationError(f"File type {content_type} is not allowed")
+            
+        # 对于未知文件类型，记录日志但允许上传
+        logger.info(f"Allowing unknown file type: {content_type} for file: {file.filename}")
     
     def _guess_content_type(self, filename: str) -> str:
         """
@@ -524,3 +538,61 @@ class FileService:
         # 过滤短词
         keywords = [w for w in words if len(w) > 2]
         return keywords 
+    
+    async def analyze_unknown_file_type(self, file_id: str) -> Dict[str, Any]:
+        """
+        分析未知文件类型
+        
+        Args:
+            file_id: 文件ID
+            
+        Returns:
+            Dict[str, Any]: 分析结果
+            
+        Raises:
+            NotFoundError: 文件不存在
+            ServerError: 分析失败
+        """
+        if not self.unknown_file_analyzer:
+            raise ServerError("Unknown file analyzer not available")
+        
+        try:
+            # 获取文件信息
+            file = await self.file_repository.get_file_metadata(file_id)
+            if not file:
+                raise NotFoundError(f"File not found: {file_id}")
+            
+            # 分析文件类型
+            analysis_result = await self.unknown_file_analyzer.analyze_unknown_file_type(
+                filename=file.filename,
+                content_type=file.content_type,
+                file_size=file.file_size
+            )
+            
+            # 将分析结果保存到文件元数据中
+            analysis_metadata = {
+                "unknown_file_analysis": {
+                    "analysis_time": datetime.now(UTC).isoformat(),
+                    "file_type_description": analysis_result.file_type_description,
+                    "processing_strategy": analysis_result.processing_strategy,
+                    "recommended_tools": analysis_result.recommended_tools,
+                    "processing_steps": analysis_result.processing_steps,
+                    "expected_output": analysis_result.expected_output
+                }
+            }
+            
+            await self.file_repository.update_file_metadata(file_id, analysis_metadata)
+            
+            logger.info(f"Successfully analyzed unknown file type for {file_id}")
+            
+            return {
+                "file_id": file_id,
+                "filename": file.filename,
+                "analysis": analysis_result.dict()
+            }
+            
+        except NotFoundError:
+            raise
+        except Exception as e:
+            logger.error(f"Error analyzing unknown file type {file_id}: {str(e)}")
+            raise ServerError(f"Failed to analyze unknown file type: {str(e)}")

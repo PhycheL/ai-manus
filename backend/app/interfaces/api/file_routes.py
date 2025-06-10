@@ -14,7 +14,8 @@ from app.interfaces.schemas.file_schemas import (
     FileProcessResponse,
     FileSyncRequest,
     FileSyncResponse,
-    FileDeleteRequest
+    FileDeleteRequest,
+    FileAnalysisResult
 )
 from app.domain.external.file_processor import ProcessType
 
@@ -313,4 +314,30 @@ async def sync_from_sandbox(
         
     except Exception as e:
         logger.error(f"Error syncing file from sandbox: {str(e)}")
+        raise
+
+
+@router.post("/{file_id}/analyze-unknown-type", response_model=APIResponse[FileAnalysisResult])
+async def analyze_unknown_file_type(
+    file_id: str,
+    file_service: FileService = Depends(get_file_service)
+) -> APIResponse[FileAnalysisResult]:
+    """
+    分析未知文件类型
+    
+    使用LLM分析未知文件类型，并提供处理建议
+    """
+    try:
+        result = await file_service.analyze_unknown_file_type(file_id)
+        
+        return APIResponse.success(
+            FileAnalysisResult(
+                file_id=result["file_id"],
+                filename=result["filename"],
+                analysis=result["analysis"]
+            )
+        )
+        
+    except Exception as e:
+        logger.error(f"Error analyzing unknown file type {file_id}: {str(e)}")
         raise 
