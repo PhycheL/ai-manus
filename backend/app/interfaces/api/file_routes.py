@@ -23,8 +23,9 @@ router = APIRouter(prefix="/files", tags=["files"])
 
 
 def get_file_service() -> FileService:
-    # Placeholder for dependency injection
-    return None
+    # This will be overridden by dependency injection
+    # If you see this error, dependency injection is not working
+    raise RuntimeError("FileService dependency injection not configured")
 
 
 @router.post("/upload", response_model=APIResponse[FileUploadResponse])
@@ -51,6 +52,7 @@ async def upload_file(
         # 解析标签
         tag_list = [tag.strip() for tag in tags.split(",")] if tags else None
         
+        print(f"---------------------------------Uploading file: {file.filename} to session: {session_id}")  
         # 上传文件
         result = await file_service.upload_file(
             file=file,

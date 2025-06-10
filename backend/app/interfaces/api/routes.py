@@ -24,6 +24,15 @@ def get_agent_service() -> AgentService:
     # Placeholder for dependency injection
     return None
 
+@router.get("/health")
+async def health_check():
+    """健康检查端点"""
+    return {
+        "status": "healthy",
+        "message": "Manus AI Agent API is running",
+        "timestamp": datetime.now().isoformat()
+    }
+
 @router.put("/sessions", response_model=APIResponse[CreateSessionResponse])
 async def create_session(
     agent_service: AgentService = Depends(get_agent_service)

@@ -412,8 +412,8 @@ const handleFilesSelected = async (files: File[]) => {
     // 显示上传进度（可以考虑添加加载状态）
     console.log('开始上传文件...');
     
-    // 调用文件上传API
-    const uploadResults = await agentApi.uploadFiles(files);
+    // 调用文件上传API，传递当前会话ID
+    const uploadResults = await agentApi.uploadFiles(files, sessionId.value);
     
     // 上传成功
     console.log('文件上传成功:', uploadResults);

@@ -172,17 +172,24 @@ export interface ListFilesResponse {
 }
 
 /**
- * 上传文件到沙盒
+ * 上传文件到后端（与会话关联）
  * @param files 要上传的文件数组
+ * @param sessionId 会话ID
  * @returns 上传结果
  */
-export async function uploadFiles(files: File[]): Promise<UploadFileResponse[]> {
+export async function uploadFiles(files: File[], sessionId?: string): Promise<UploadFileResponse[]> {
   const uploadPromises = files.map(async (file) => {
     const formData = new FormData();
     formData.append('file', file);
+    
+    // 使用会话ID，如果没有提供则使用默认值
+    formData.append('session_id', sessionId || 'unknown-session');
+    formData.append('user_id', 'frontend-user');
+    formData.append('tags', 'frontend,upload');
+    formData.append('category', 'user-upload');
 
-    // 直接连接到沙盒的上传API
-    const response = await fetch('http://localhost:8080/api/v1/files/upload', {
+    // 连接到后端的文件上传API
+    const response = await fetch(`${BASE_URL}/files/upload`, {
       method: 'POST',
       body: formData,
     });
@@ -192,11 +199,19 @@ export async function uploadFiles(files: File[]): Promise<UploadFileResponse[]> 
     }
 
     const result = await response.json();
-    // 沙盒API返回格式：{ success: boolean, message: string, data: {...} }
-    if (result.success) {
-      return result.data;
+    // 后端API返回格式：{ code: number, msg: string, data: {...} }
+    if (result.code === 0) {
+      return {
+        file_id: result.data.file_id,
+        filename: result.data.filename,
+        original_filename: result.data.filename,
+        size: result.data.file_size,
+        path: result.data.download_url,
+        mime_type: 'unknown', // 后端响应中没有这个字段
+        session_id: sessionId
+      };
     } else {
-      throw new Error(`上传文件 ${file.name} 失败: ${result.message}`);
+      throw new Error(`上传文件 ${file.name} 失败: ${result.msg}`);
     }
   });
 

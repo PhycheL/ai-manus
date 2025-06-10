@@ -12,7 +12,7 @@ services:
       - "5173:5173"  # Vite default development port
     environment:
       - NODE_ENV=development
-      - VITE_API_URL=http://127.0.0.1:8000
+      - VITE_API_URL=http://localhost:8000
     depends_on:
       - backend
     restart: unless-stopped
@@ -89,8 +89,8 @@ services:
     volumes:
       - mongodb_data:/data/db
     restart: unless-stopped
-    #ports:
-    #  - "27017:27017"
+    ports:
+     - "27017:27017"
     networks:
       - manus-network
 

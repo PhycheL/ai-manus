@@ -93,6 +93,7 @@
 <script>
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
+import { API_CONFIG } from '../api/client'
 
 export default {
   name: 'FileUpload',
@@ -111,9 +112,9 @@ export default {
     // 最大文件大小 (50MB)
     const maxFileSize = 50 * 1024 * 1024
     
-    // 获取沙盒地址
-    const getSandboxUrl = () => {
-      return 'http://localhost:8001'
+    // 获取后端地址
+    const getBackendUrl = () => {
+      return API_CONFIG.host || 'http://localhost:8000'
     }
     
     // 触发文件选择
@@ -192,7 +193,7 @@ export default {
       uploadProgress.value = 0
       
       try {
-        const sandboxUrl = getSandboxUrl()
+        const backendUrl = getBackendUrl()
         const sessionId = 'current-session'
         
         for (let i = 0; i < files.length; i++) {
@@ -202,7 +203,7 @@ export default {
           formData.append('session_id', sessionId)
           
           const response = await axios.post(
-            `${sandboxUrl}/api/v1/files/upload`,
+            `${backendUrl}/api/v1/files/upload`,
             formData,
             {
               headers: {
@@ -234,7 +235,7 @@ export default {
         
       } catch (error) {
         console.error('文件上传失败:', error)
-        errorMessage.value = error.message || '文件上传失败，请重试'
+        errorMessage.value = error.response?.data?.detail || error.message || '文件上传失败，请重试'
       } finally {
         isUploading.value = false
         setTimeout(() => {
@@ -246,8 +247,12 @@ export default {
     // 删除文件
     const deleteFile = async (fileId) => {
       try {
-        const sandboxUrl = getSandboxUrl()
-        const response = await axios.delete(`${sandboxUrl}/api/v1/files/${fileId}`)
+        const backendUrl = getBackendUrl()
+        const response = await axios.delete(`${backendUrl}/api/v1/files/batch`, {
+          data: {
+            file_ids: [fileId]
+          }
+        })
         
         if (response.data.success) {
           uploadedFiles.value = uploadedFiles.value.filter(f => f.file_id !== fileId)
@@ -256,15 +261,16 @@ export default {
         }
       } catch (error) {
         console.error('删除文件失败:', error)
-        errorMessage.value = '删除文件失败，请重试'
+        errorMessage.value = error.response?.data?.detail || '删除文件失败，请重试'
       }
     }
     
     // 加载已上传的文件
     const loadUploadedFiles = async () => {
       try {
-        const sandboxUrl = getSandboxUrl()
-        const response = await axios.get(`${sandboxUrl}/api/v1/files/list`)
+        const backendUrl = getBackendUrl()
+        const sessionId = 'current-session'
+        const response = await axios.get(`${backendUrl}/api/v1/files/history?session_id=${sessionId}`)
         
         if (response.data.success) {
           uploadedFiles.value = response.data.data.files || []
