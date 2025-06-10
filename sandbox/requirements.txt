@@ -4,3 +4,9 @@ pydantic
 email-validator
 python-multipart
 pydantic-settings
+aiofiles
+aiohttp
+PyPDF2
+Pillow
+pandas
+openpyxl
