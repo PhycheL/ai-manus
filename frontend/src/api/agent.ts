@@ -146,3 +146,93 @@ export async function viewFile(sessionId: string, file: string): Promise<FileVie
   const response = await apiClient.post<ApiResponse<FileViewResponse>>(`/sessions/${sessionId}/file`, { file });
   return response.data.data;
 }
+
+// 文件上传相关类型定义
+export interface UploadFileResponse {
+  file_id: string;
+  filename: string;
+  original_filename: string;
+  size: number;
+  path: string;
+  mime_type: string;
+  session_id: string | null;
+}
+
+export interface UploadedFile {
+  file_id: string;
+  filename: string;
+  size: number;
+  path: string;
+  mime_type: string;
+  created_at: number;
+}
+
+export interface ListFilesResponse {
+  files: UploadedFile[];
+}
+
+/**
+ * 上传文件到沙盒
+ * @param files 要上传的文件数组
+ * @returns 上传结果
+ */
+export async function uploadFiles(files: File[]): Promise<UploadFileResponse[]> {
+  const uploadPromises = files.map(async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    // 直接连接到沙盒的上传API
+    const response = await fetch('http://localhost:8080/api/v1/files/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`上传文件 ${file.name} 失败: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    // 沙盒API返回格式：{ success: boolean, message: string, data: {...} }
+    if (result.success) {
+      return result.data;
+    } else {
+      throw new Error(`上传文件 ${file.name} 失败: ${result.message}`);
+    }
+  });
+
+  return Promise.all(uploadPromises);
+}
+
+/**
+ * 获取已上传的文件列表
+ * @returns 文件列表
+ */
+export async function getUploadedFiles(): Promise<ListFilesResponse> {
+  const response = await fetch('http://localhost:8080/api/v1/files/list');
+  
+  if (!response.ok) {
+    throw new Error(`获取文件列表失败: ${response.statusText}`);
+  }
+
+  const result = await response.json();
+  // 沙盒API返回格式：{ success: boolean, message: string, data: { files: [...] } }
+  if (result.success) {
+    return result.data;
+  } else {
+    throw new Error(`获取文件列表失败: ${result.message}`);
+  }
+}
+
+/**
+ * 删除已上传的文件
+ * @param fileId 文件ID
+ */
+export async function deleteUploadedFile(fileId: string): Promise<void> {
+  const response = await fetch(`http://localhost:8080/api/v1/files/${fileId}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    throw new Error(`删除文件失败: ${response.statusText}`);
+  }
+}
