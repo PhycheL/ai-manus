@@ -10,10 +10,14 @@ from app.application.services.agent_service import AgentService
 from app.interfaces.schemas.request import ChatRequest, FileViewRequest, ShellViewRequest
 from app.interfaces.schemas.response import APIResponse, CreateSessionResponse, GetSessionResponse, ShellViewResponse, FileViewResponse, ListSessionItem, ListSessionResponse
 from app.interfaces.schemas.event import SSEEventFactory
+from app.interfaces.api import file_routes
 
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+# Include file routes
+router.include_router(file_routes.router)
 
 
 def get_agent_service() -> AgentService:

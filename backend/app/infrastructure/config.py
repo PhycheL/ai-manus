@@ -40,6 +40,37 @@ class Settings(BaseSettings):
     google_search_api_key: str | None = None
     google_search_engine_id: str | None = None
     
+    # File upload configuration
+    max_file_size: int = 50 * 1024 * 1024  # 50MB
+    allowed_file_types: list[str] = [
+        # Documents
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "text/plain",
+        "text/html",
+        "text/markdown",
+        # Images
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/bmp",
+        "image/webp",
+        # Data files
+        "application/json",
+        "application/xml",
+        "text/csv",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        # Archives
+        "application/zip",
+        "application/x-rar-compressed",
+        "application/x-7z-compressed"
+    ]
+    file_retention_days: int = 30
+    gridfs_bucket_name: str = "files"
+    file_chunk_size: int = 255 * 1024  # 255KB
+    
     # Logging configuration
     log_level: str = "INFO"
     

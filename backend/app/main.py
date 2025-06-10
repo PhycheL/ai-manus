@@ -16,10 +16,14 @@ from app.infrastructure.external.llm.openai_llm import OpenAILLM
 from app.infrastructure.external.sandbox.docker_sandbox import DockerSandbox
 from app.infrastructure.repositories.mongo_agent_repository import MongoAgentRepository
 from app.infrastructure.repositories.mongo_session_repository import MongoSessionRepository
+from app.infrastructure.repositories.gridfs_file_repository import GridFSFileRepository
 from app.infrastructure.external.task.redis_task import RedisStreamTask
 from app.interfaces.api.routes import get_agent_service
+from app.interfaces.api.file_routes import get_file_service
 from app.infrastructure.models.documents import AgentDocument, SessionDocument
+from app.infrastructure.models.file_document import FileDocument
 from app.infrastructure.utils.llm_json_parser import LLMJsonParser
+from app.application.services.file_service import FileService
 from beanie import init_beanie
 
 # Initialize logging system
@@ -55,6 +59,14 @@ def create_agent_service() -> AgentService:
 # Create agent service instance
 agent_service = create_agent_service()
 
+# Create file service instance
+def create_file_service() -> FileService:
+    return FileService(
+        file_repository=GridFSFileRepository(get_mongodb().client[settings.mongodb_database])
+    )
+
+file_service = create_file_service()
+
 async def shutdown() -> None:
     """Cleanup function that will be called when the application is shutting down"""
     logger.info("Graceful shutdown...")
@@ -83,7 +95,7 @@ async def lifespan(app: FastAPI):
     # Initialize Beanie
     await init_beanie(
         database=get_mongodb().client[settings.mongodb_database],
-        document_models=[AgentDocument, SessionDocument]
+        document_models=[AgentDocument, SessionDocument, FileDocument]
     )
     logger.info("Successfully initialized Beanie")
     
@@ -103,6 +115,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Manus AI Agent", lifespan=lifespan, timeout_graceful_shutdown=5)
 app.dependency_overrides[get_agent_service] = lambda: agent_service
+app.dependency_overrides[get_file_service] = lambda: file_service
 
 # Configure CORS
 app.add_middleware(
