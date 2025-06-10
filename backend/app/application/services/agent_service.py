@@ -151,7 +151,7 @@ class AgentService:
             
         Raises:
             ResourceNotFoundError: When Agent or Sandbox does not exist
-            OperationError: When a server error occurs during execution
+            ServerError: When a server error occurs during execution
         """
         logger.info(f"Viewing shell output for session {session_id}")
         
@@ -188,7 +188,7 @@ class AgentService:
             
         Raises:
             ResourceNotFoundError: When Agent or Sandbox does not exist
-            OperationError: When a server error occurs during execution
+            ServerError: When a server error occurs during execution
         """
         logger.info(f"Viewing file content for session {session_id}, file path: {path}")
         

@@ -8,7 +8,7 @@ from app.domain.models.file import File, FileSource, ProcessingStatus
 from app.domain.repositories.file_repository import FileRepository
 from app.domain.external.file_processor import FileProcessor, ProcessType
 from app.infrastructure.config import get_settings
-from app.application.errors.exceptions import NotFoundError, ValidationError, OperationError
+from app.application.errors.exceptions import NotFoundError, ValidationError, ServerError
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -94,7 +94,7 @@ class FileService:
             
         Raises:
             ValidationError: 文件验证失败
-            OperationError: 上传操作失败
+            ServerError: 上传操作失败
         """
         try:
             # 验证文件
@@ -134,7 +134,7 @@ class FileService:
             
         except Exception as e:
             logger.error(f"Error uploading file {file.filename}: {str(e)}")
-            raise OperationError(f"Failed to upload file: {str(e)}")
+            raise ServerError(f"Failed to upload file: {str(e)}")
     
     async def download_file(self, file_id: str) -> FileDownloadResponse:
         """
@@ -148,7 +148,7 @@ class FileService:
             
         Raises:
             NotFoundError: 文件不存在
-            OperationError: 下载操作失败
+            ServerError: 下载操作失败
         """
         try:
             # 获取文件元数据
@@ -171,7 +171,7 @@ class FileService:
             raise
         except Exception as e:
             logger.error(f"Error downloading file {file_id}: {str(e)}")
-            raise OperationError(f"Failed to download file: {str(e)}")
+            raise ServerError(f"Failed to download file: {str(e)}")
     
     async def get_file_stream(self, file_id: str) -> tuple[BinaryIO, str, str]:
         """
@@ -185,7 +185,7 @@ class FileService:
             
         Raises:
             NotFoundError: 文件不存在
-            OperationError: 操作失败
+            ServerError: 操作失败
         """
         try:
             # 获取文件元数据
@@ -204,7 +204,7 @@ class FileService:
             raise
         except Exception as e:
             logger.error(f"Error getting file stream {file_id}: {str(e)}")
-            raise OperationError(f"Failed to get file stream: {str(e)}")
+            raise ServerError(f"Failed to get file stream: {str(e)}")
     
     async def get_file_history(self, 
                               session_id: Optional[str] = None,
@@ -247,7 +247,7 @@ class FileService:
             
         except Exception as e:
             logger.error(f"Error getting file history: {str(e)}")
-            raise OperationError(f"Failed to get file history: {str(e)}")
+            raise ServerError(f"Failed to get file history: {str(e)}")
     
     async def search_files(self,
                           query: str,
@@ -289,7 +289,7 @@ class FileService:
             
         except Exception as e:
             logger.error(f"Error searching files: {str(e)}")
-            raise OperationError(f"Failed to search files: {str(e)}")
+            raise ServerError(f"Failed to search files: {str(e)}")
     
     async def delete_files(self, file_ids: List[str]) -> Dict[str, bool]:
         """
@@ -311,7 +311,7 @@ class FileService:
             
         except Exception as e:
             logger.error(f"Error deleting files: {str(e)}")
-            raise OperationError(f"Failed to delete files: {str(e)}")
+            raise ServerError(f"Failed to delete files: {str(e)}")
     
     async def get_file_detail(self, file_id: str) -> Dict[str, Any]:
         """
@@ -348,7 +348,7 @@ class FileService:
             raise
         except Exception as e:
             logger.error(f"Error getting file detail {file_id}: {str(e)}")
-            raise OperationError(f"Failed to get file detail: {str(e)}")
+            raise ServerError(f"Failed to get file detail: {str(e)}")
     
     async def process_file(self,
                           file_id: str,
@@ -367,10 +367,10 @@ class FileService:
             
         Raises:
             NotFoundError: 文件不存在
-            OperationError: 处理失败
+            ServerError: 处理失败
         """
         if not self.file_processor:
-            raise OperationError("File processor not configured")
+            raise ServerError("File processor not configured")
         
         try:
             # 获取文件信息
@@ -423,7 +423,7 @@ class FileService:
                 {"processing_status": ProcessingStatus.FAILED}
             )
             
-            raise OperationError(f"Failed to process file: {str(e)}")
+            raise ServerError(f"Failed to process file: {str(e)}")
     
     async def sync_from_sandbox(self,
                                file_data: bytes,
@@ -466,7 +466,7 @@ class FileService:
             
         except Exception as e:
             logger.error(f"Error syncing file from sandbox: {str(e)}")
-            raise OperationError(f"Failed to sync file from sandbox: {str(e)}")
+            raise ServerError(f"Failed to sync file from sandbox: {str(e)}")
     
     async def _validate_file(self, file: UploadFile):
         """

@@ -9,4 +9,4 @@ COPY . .
 
 EXPOSE 8090
 
-CMD ["./dev.sh"] 
+CMD ["bash", "dev.sh"] 

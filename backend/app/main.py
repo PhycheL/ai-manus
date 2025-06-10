@@ -59,13 +59,19 @@ def create_agent_service() -> AgentService:
 # Create agent service instance
 agent_service = create_agent_service()
 
-# Create file service instance
+# File service will be created after MongoDB initialization
+file_service = None
+
 def create_file_service() -> FileService:
     return FileService(
         file_repository=GridFSFileRepository(get_mongodb().client[settings.mongodb_database])
     )
 
-file_service = create_file_service()
+def get_file_service_instance() -> FileService:
+    """获取文件服务实例的依赖注入函数"""
+    if file_service is None:
+        raise RuntimeError("FileService not initialized yet")
+    return file_service
 
 async def shutdown() -> None:
     """Cleanup function that will be called when the application is shutting down"""
@@ -99,6 +105,11 @@ async def lifespan(app: FastAPI):
     )
     logger.info("Successfully initialized Beanie")
     
+    # Create file service after MongoDB initialization
+    global file_service
+    file_service = create_file_service()
+    logger.info("Successfully initialized FileService")
+    
     # Initialize Redis
     await get_redis().initialize()
     
@@ -115,7 +126,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Manus AI Agent", lifespan=lifespan, timeout_graceful_shutdown=5)
 app.dependency_overrides[get_agent_service] = lambda: agent_service
-app.dependency_overrides[get_file_service] = lambda: file_service
+app.dependency_overrides[get_file_service] = get_file_service_instance
 
 # Configure CORS
 app.add_middleware(

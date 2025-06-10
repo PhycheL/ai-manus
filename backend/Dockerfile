@@ -9,9 +9,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy project files
 COPY . .
 
-# Set script execution permissions
-RUN chmod +x run.sh
-
 # Set environment variables
 ENV PYTHONPATH=/app
 
@@ -19,4 +16,4 @@ ENV PYTHONPATH=/app
 EXPOSE 8000
 
 # Start command
-CMD ["./run.sh"] 
+CMD ["bash", "run.sh"] 
