@@ -3,15 +3,13 @@ import axios, { AxiosError } from 'axios';
 
 // API configuration
 export const API_CONFIG = {
-  host: import.meta.env.VITE_API_URL || '',
+  host: 'http://localhost:8000',
   version: 'v1',
   timeout: 30000, // Request timeout in milliseconds
 };
 
 // Complete API base URL
-export const BASE_URL = API_CONFIG.host 
-  ? `${API_CONFIG.host}/api/${API_CONFIG.version}` 
-  : `/api/${API_CONFIG.version}`;
+export const BASE_URL = `${API_CONFIG.host}/api/${API_CONFIG.version}`;
 
 // Unified response format
 export interface ApiResponse<T> {

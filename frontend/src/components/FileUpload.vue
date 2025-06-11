@@ -213,10 +213,9 @@ export default {
           const file = files[i]
           const formData = new FormData()
           formData.append('file', file)
-          formData.append('session_id', sessionId)
           
           const response = await axios.post(
-            `${backendUrl}/api/v1/files/upload`,
+            `${backendUrl}/sessions/${sessionId}/files/upload`,
             formData,
             {
               headers: {
@@ -248,12 +247,9 @@ export default {
         
       } catch (error) {
         console.error('文件上传失败:', error)
-        errorMessage.value = error.response?.data?.detail || error.message || '文件上传失败，请重试'
+        errorMessage.value = error.message || '文件上传失败'
       } finally {
         isUploading.value = false
-        setTimeout(() => {
-          uploadProgress.value = 0
-        }, 1000)
       }
     }
     
@@ -261,7 +257,9 @@ export default {
     const deleteFile = async (fileId) => {
       try {
         const backendUrl = getBackendUrl()
-        const response = await axios.delete(`${backendUrl}/api/v1/files/batch`, {
+        const sessionId = 'current-session'
+        
+        const response = await axios.delete(`${backendUrl}/sessions/${sessionId}/files/batch`, {
           data: {
             file_ids: [fileId]
           }
@@ -270,11 +268,11 @@ export default {
         if (response.data.success) {
           uploadedFiles.value = uploadedFiles.value.filter(f => f.file_id !== fileId)
         } else {
-          errorMessage.value = response.data.message || '删除文件失败'
+          throw new Error(response.data.message || '删除失败')
         }
       } catch (error) {
         console.error('删除文件失败:', error)
-        errorMessage.value = error.response?.data?.detail || '删除文件失败，请重试'
+        errorMessage.value = error.message || '删除文件失败'
       }
     }
     
@@ -283,7 +281,7 @@ export default {
       try {
         const backendUrl = getBackendUrl()
         const sessionId = 'current-session'
-        const response = await axios.get(`${backendUrl}/api/v1/files/history?session_id=${sessionId}`)
+        const response = await axios.get(`${backendUrl}/sessions/${sessionId}/history`)
         
         if (response.data.success) {
           uploadedFiles.value = response.data.data.files || []
@@ -322,37 +320,100 @@ export default {
     // 分析未知文件类型
     const analyzeUnknownFileType = async (fileId) => {
       try {
-        const file = uploadedFiles.value.find(f => f.file_id === fileId)
-        if (!file) return
-        
-        file.analyzing = true
-        
         const backendUrl = getBackendUrl()
-        const response = await axios.post(`${backendUrl}/api/v1/files/${fileId}/analyze-unknown-type`)
+        const sessionId = 'current-session'
+        
+        const file = uploadedFiles.value.find(f => f.file_id === fileId)
+        if (file) {
+          file.analyzing = true
+        }
+        
+        const response = await axios.post(
+          `${backendUrl}/sessions/${sessionId}/files/${fileId}/analyze-unknown-type`
+        )
         
         if (response.data.success) {
-          const analysis = response.data.data.analysis
+          const analysisResult = response.data.data
+          emit('file-analyzed', { fileId, analysisResult })
           
-          // 显示分析结果
-          alert(`文件类型分析结果：
-文件类型：${analysis.file_type_description}
-处理策略：${analysis.processing_strategy}
-推荐工具：${analysis.recommended_tools.join(', ')}
-期望输出：${analysis.expected_output}`)
-          
-          // 可以在这里触发进一步的处理
-          emit('file-analyzed', { fileId, analysis })
+          // 更新文件信息
+          const file = uploadedFiles.value.find(f => f.file_id === fileId)
+          if (file) {
+            file.analyzing = false
+            file.analysis_result = analysisResult
+          }
         } else {
-          errorMessage.value = response.data.message || '文件分析失败'
+          throw new Error(response.data.message || '分析失败')
         }
       } catch (error) {
         console.error('分析文件类型失败:', error)
-        errorMessage.value = error.response?.data?.detail || '文件分析失败，请重试'
-      } finally {
+        errorMessage.value = error.message || '分析文件类型失败'
+        
+        // 重置分析状态
         const file = uploadedFiles.value.find(f => f.file_id === fileId)
         if (file) {
           file.analyzing = false
         }
+      }
+    }
+    
+    // 获取文件历史
+    const fetchFileHistory = async () => {
+      try {
+        const backendUrl = getBackendUrl()
+        const sessionId = 'current-session'
+        
+        const response = await axios.get(`${backendUrl}/sessions/${sessionId}/history`)
+        
+        if (response.data.success) {
+          uploadedFiles.value = response.data.data.files
+        } else {
+          throw new Error(response.data.message || '获取文件历史失败')
+        }
+      } catch (error) {
+        console.error('获取文件历史失败:', error)
+        errorMessage.value = error.message || '获取文件历史失败'
+      }
+    }
+    
+    // 搜索文件
+    const searchFiles = async (query) => {
+      try {
+        const backendUrl = getBackendUrl()
+        const sessionId = 'current-session'
+        
+        const response = await axios.get(`${backendUrl}/sessions/${sessionId}/files/search`, {
+          params: { q: query }
+        })
+        
+        if (response.data.success) {
+          uploadedFiles.value = response.data.data.results
+        } else {
+          throw new Error(response.data.message || '搜索文件失败')
+        }
+      } catch (error) {
+        console.error('搜索文件失败:', error)
+        errorMessage.value = error.message || '搜索文件失败'
+      }
+    }
+    
+    // 获取文件详情
+    const getFileDetail = async (fileId) => {
+      try {
+        const backendUrl = getBackendUrl()
+        const sessionId = 'current-session'
+        
+        const response = await axios.get(`${backendUrl}/sessions/${sessionId}/files/${fileId}/detail`)
+        
+        if (response.data.success) {
+          return response.data.data
+        } else {
+          throw new Error(response.data.message || '获取文件详情失败')
+        }
+      } catch (error) {
+        console.error('获取文件详情失败:', error)
+        errorMessage.value = error.message || '获取文件详情失败'
+        return null
       }
     }
     
@@ -376,7 +437,10 @@ export default {
       deleteFile,
       formatFileSize,
       isUnknownFileType,
-      analyzeUnknownFileType
+      analyzeUnknownFileType,
+      fetchFileHistory,
+      searchFiles,
+      getFileDetail
     }
   }
 }

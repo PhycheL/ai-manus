@@ -183,13 +183,10 @@ export async function uploadFiles(files: File[], sessionId?: string): Promise<Up
     formData.append('file', file);
     
     // 使用会话ID，如果没有提供则使用默认值
-    formData.append('session_id', sessionId || 'unknown-session');
-    formData.append('user_id', 'frontend-user');
-    formData.append('tags', 'frontend,upload');
-    formData.append('category', 'user-upload');
-
+    const currentSessionId = sessionId || 'unknown-session';
+    
     // 连接到后端的文件上传API
-    const response = await fetch(`${BASE_URL}/files/upload`, {
+    const response = await fetch(`${BASE_URL}/sessions/${currentSessionId}/files/upload`, {
       method: 'POST',
       body: formData,
     });
@@ -208,7 +205,7 @@ export async function uploadFiles(files: File[], sessionId?: string): Promise<Up
         size: result.data.file_size,
         path: result.data.download_url,
         mime_type: 'unknown', // 后端响应中没有这个字段
-        session_id: sessionId
+        session_id: currentSessionId
       };
     } else {
       throw new Error(`上传文件 ${file.name} 失败: ${result.msg}`);
@@ -220,17 +217,18 @@ export async function uploadFiles(files: File[], sessionId?: string): Promise<Up
 
 /**
  * 获取已上传的文件列表
+ * @param sessionId 会话ID
  * @returns 文件列表
  */
-export async function getUploadedFiles(): Promise<ListFilesResponse> {
-  const response = await fetch('http://localhost:8080/api/v1/files/list');
+export async function getUploadedFiles(sessionId: string): Promise<ListFilesResponse> {
+  const response = await fetch(`${BASE_URL}/sessions/${sessionId}/history`);
   
   if (!response.ok) {
     throw new Error(`获取文件列表失败: ${response.statusText}`);
   }
 
   const result = await response.json();
-  // 沙盒API返回格式：{ success: boolean, message: string, data: { files: [...] } }
+  // 后端API返回格式：{ success: boolean, message: string, data: { files: [...] } }
   if (result.success) {
     return result.data;
   } else {
@@ -241,13 +239,25 @@ export async function getUploadedFiles(): Promise<ListFilesResponse> {
 /**
  * 删除已上传的文件
  * @param fileId 文件ID
+ * @param sessionId 会话ID
  */
-export async function deleteUploadedFile(fileId: string): Promise<void> {
-  const response = await fetch(`http://localhost:8080/api/v1/files/${fileId}`, {
+export async function deleteUploadedFile(fileId: string, sessionId: string): Promise<void> {
+  const response = await fetch(`${BASE_URL}/sessions/${sessionId}/files/batch`, {
     method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      file_ids: [fileId]
+    })
   });
 
   if (!response.ok) {
     throw new Error(`删除文件失败: ${response.statusText}`);
+  }
+
+  const result = await response.json();
+  if (!result.success) {
+    throw new Error(`删除文件失败: ${result.message}`);
   }
 }

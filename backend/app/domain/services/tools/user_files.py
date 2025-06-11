@@ -116,7 +116,7 @@ class UserFilesTool(BaseTool):
                         else:
                             # 没有找到文件，尝试获取会话的文件历史
                             if current_session_id:
-                                history_url = f"{self.backend_url}/api/v1/files/history"
+                                history_url = f"{self.backend_url}/sessions/{current_session_id}/history"
                                 history_params = {"session_id": current_session_id, "limit": 20}
                                 
                                 resp = await client.get(history_url, params=history_params)
@@ -226,7 +226,7 @@ class UserFilesTool(BaseTool):
             会话中的文件列表
         """
         try:
-            history_url = f"{self.backend_url}/api/v1/files/history"
+            history_url = f"{self.backend_url}/sessions/{session_id}/history"
             params = {
                 "session_id": session_id,
                 "limit": limit or 20

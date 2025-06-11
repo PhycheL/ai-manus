@@ -20,7 +20,7 @@ from app.interfaces.schemas.file_schemas import (
 from app.domain.external.file_processor import ProcessType
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/files", tags=["files"])
+router = APIRouter(tags=["files"])
 
 
 def get_file_service() -> FileService:
@@ -29,10 +29,10 @@ def get_file_service() -> FileService:
     raise RuntimeError("FileService dependency injection not configured")
 
 
-@router.post("/upload", response_model=APIResponse[FileUploadResponse])
+@router.post("/sessions/{session_id}/files/upload", response_model=APIResponse[FileUploadResponse])
 async def upload_file(
+    session_id: str,
     file: UploadFile = File(...),
-    session_id: str = Form(...),
     user_id: Optional[str] = Form(None),
     tags: Optional[str] = Form(None),  # 逗号分隔的标签
     category: Optional[str] = Form(None),
@@ -78,8 +78,9 @@ async def upload_file(
         raise
 
 
-@router.get("/{file_id}/download")
+@router.get("/sessions/{session_id}/files/{file_id}/download")
 async def download_file(
+    session_id: str,
     file_id: str,
     file_service: FileService = Depends(get_file_service)
 ) -> StreamingResponse:
@@ -107,9 +108,9 @@ async def download_file(
         raise
 
 
-@router.get("/history", response_model=APIResponse[FileHistoryResponse])
+@router.get("/sessions/{session_id}/history", response_model=APIResponse[FileHistoryResponse])
 async def get_file_history(
-    session_id: Optional[str] = Query(None),
+    session_id: str,
     user_id: Optional[str] = Query(None),
     file_type: Optional[str] = Query(None),
     skip: int = Query(0, ge=0),
@@ -159,10 +160,10 @@ async def get_file_history(
         raise
 
 
-@router.get("/search", response_model=APIResponse[FileSearchResponse])
+@router.get("/sessions/{session_id}/files/search", response_model=APIResponse[FileSearchResponse])
 async def search_files(
+    session_id: str,
     q: str = Query(..., min_length=1),
-    session_id: Optional[str] = Query(None),
     user_id: Optional[str] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
@@ -208,8 +209,9 @@ async def search_files(
         raise
 
 
-@router.get("/{file_id}/detail", response_model=APIResponse[FileDetailResponse])
+@router.get("/sessions/{session_id}/files/{file_id}/detail", response_model=APIResponse[FileDetailResponse])
 async def get_file_detail(
+    session_id: str,
     file_id: str,
     file_service: FileService = Depends(get_file_service)
 ) -> APIResponse[FileDetailResponse]:
@@ -230,8 +232,9 @@ async def get_file_detail(
         raise
 
 
-@router.delete("/batch", response_model=APIResponse[Dict[str, bool]])
+@router.delete("/sessions/{session_id}/files/batch", response_model=APIResponse[Dict[str, bool]])
 async def delete_files(
+    session_id: str,
     request: FileDeleteRequest,
     file_service: FileService = Depends(get_file_service)
 ) -> APIResponse[Dict[str, bool]]:
@@ -250,8 +253,9 @@ async def delete_files(
         raise
 
 
-@router.post("/{file_id}/process", response_model=APIResponse[FileProcessResponse])
+@router.post("/sessions/{session_id}/files/{file_id}/process", response_model=APIResponse[FileProcessResponse])
 async def process_file(
+    session_id: str,
     file_id: str,
     request: FileProcessRequest,
     file_service: FileService = Depends(get_file_service)
@@ -317,8 +321,9 @@ async def sync_from_sandbox(
         raise
 
 
-@router.post("/{file_id}/analyze-unknown-type", response_model=APIResponse[FileAnalysisResult])
+@router.post("/sessions/{session_id}/files/{file_id}/analyze-unknown-type", response_model=APIResponse[FileAnalysisResult])
 async def analyze_unknown_file_type(
+    session_id: str,
     file_id: str,
     file_service: FileService = Depends(get_file_service)
 ) -> APIResponse[FileAnalysisResult]:
