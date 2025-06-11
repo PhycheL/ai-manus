@@ -25,7 +25,7 @@
           <div class="flex flex-col bg-[var(--background-gray-main)] w-full">
             <div class="[&amp;:not(:empty)]:pb-2 bg-[var(--background-gray-main)] rounded-[22px_22px_0px_0px]">
             </div>
-            <ChatBox :rows="2" v-model="message" @submit="handleSubmit" :isRunning="false" />
+            <ChatBox :rows="2" v-model="message" @submit="handleSubmit" :isRunning="false" :showFileUpload="true" />
           </div>
         </div>
       </div>
@@ -40,6 +40,7 @@ import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import ChatBox from '../components/ChatBox.vue';
 import { createSession } from '../api/agent';
+import * as agentApi from '../api/agent';
 import { showErrorToast } from '../utils/toast';
 import { Bot } from 'lucide-vue-next';
 import ManusLogoTextIcon from '../components/icons/ManusLogoTextIcon.vue';
@@ -49,8 +50,10 @@ const router = useRouter();
 const message = ref('');
 const isSubmitting = ref(false);
 
-const handleSubmit = async () => {
-  if (message.value.trim() && !isSubmitting.value) {
+const handleSubmit = async (data: { message: string; files?: File[] }) => {
+  const { message: inputMessage, files } = data;
+  
+  if ((inputMessage.trim() || files?.length) && !isSubmitting.value) {
     isSubmitting.value = true;
 
     try {
@@ -58,11 +61,38 @@ const handleSubmit = async () => {
       const session = await createSession();
       const sessionId = session.session_id;
 
-      // Navigate to new route with session_id, passing initial message via state
-      router.push({
-        path: `/chat/${sessionId}`,
-        state: { message: message.value }
-      });
+      // 如果有文件，先上传文件
+      if (files && files.length > 0) {
+        console.log('开始上传文件...', files);
+        
+        try {
+          const uploadResults = await agentApi.uploadFiles(files, sessionId);
+          console.log('文件上传成功:', uploadResults);
+          
+          // 构建包含文件信息的消息
+          const fileDetails = uploadResults.map(r => `${r.filename} (ID: ${r.file_id})`).join(', ');
+          const messageWithFiles = inputMessage.trim() 
+            ? `${inputMessage}\n\n已上传文件：${fileDetails}`
+            : `请分析刚刚上传的文件。文件信息：${uploadResults.map(r => `文件名: ${r.filename}, 文件ID: ${r.file_id}`).join('; ')}`;
+
+          // Navigate to new route with session_id, passing message with file info via state
+          router.push({
+            path: `/chat/${sessionId}`,
+            state: { message: messageWithFiles }
+          });
+        } catch (uploadError) {
+          console.error('文件上传失败:', uploadError);
+          showErrorToast(`文件上传失败: ${uploadError instanceof Error ? uploadError.message : '未知错误'}`);
+          isSubmitting.value = false;
+          return;
+        }
+      } else {
+        // Navigate to new route with session_id, passing initial message via state
+        router.push({
+          path: `/chat/${sessionId}`,
+          state: { message: inputMessage }
+        });
+      }
     } catch (error) {
       console.error('Failed to create session:', error);
       showErrorToast(t('Failed to create session, please try again later'));

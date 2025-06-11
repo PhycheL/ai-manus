@@ -349,7 +349,7 @@ class UserFilesTool(BaseTool):
         """
         try:
             # 调用沙盒API处理文件
-            sandbox_url = "http://localhost:8080/api/v1/files/process"
+            sandbox_url = "http://172.18.0.5:8080/api/v1/files/process"
             
             payload = {
                 "download_url": download_url,
@@ -400,6 +400,106 @@ class UserFilesTool(BaseTool):
                 success=False,
                 data={
                     "message": f"处理文件时发生错误: {str(e)}",
+                    "error_type": type(e).__name__
+                }
+            )
+    
+    @tool(
+        name="download_file_to_sandbox",
+        description="将用户上传的文件下载到沙箱环境中，以便进行文件读取和分析。使用此工具将后端存储的文件同步到沙箱。",
+        parameters={
+            "file_id": {
+                "type": "string",
+                "description": "文件ID"
+            },
+            "download_url": {
+                "type": "string",
+                "description": "文件下载URL"
+            },
+            "filename": {
+                "type": "string",
+                "description": "文件名"
+            },
+            "target_path": {
+                "type": "string",
+                "description": "(可选) 沙箱中的目标路径，默认为 /home/ubuntu/"
+            }
+        },
+        required=["file_id", "download_url", "filename"]
+    )
+    async def download_file_to_sandbox(
+        self,
+        file_id: str,
+        download_url: str,
+        filename: str,
+        target_path: Optional[str] = None
+    ) -> ToolResult:
+        """将文件下载到沙箱环境
+        
+        Args:
+            file_id: 文件ID
+            download_url: 下载URL
+            filename: 文件名
+            target_path: 目标路径
+            
+        Returns:
+            下载结果和文件路径
+        """
+        try:
+            # 如果没有指定目标路径，使用默认路径
+            target_path = target_path or "/home/ubuntu/"
+            
+            # 调用沙箱API下载文件
+            sandbox_url = "http://172.18.0.5:8080/api/v1/files/download-from-backend"
+            
+            payload = {
+                "download_url": download_url,
+                "file_id": file_id,
+                "filename": filename,
+                "target_path": target_path
+            }
+            
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(sandbox_url, json=payload)
+                if resp.status_code == 200:
+                    result = resp.json()
+                    
+                    if result.get("success"):
+                        file_path = result.get("data", {}).get("file_path", f"{target_path}{filename}")
+                        return ToolResult(
+                            success=True,
+                            data={
+                                "message": f"文件 {filename} 已成功下载到沙箱",
+                                "file_path": file_path,
+                                "filename": filename,
+                                "file_id": file_id,
+                                "sandbox_path": file_path
+                            }
+                        )
+                    else:
+                        return ToolResult(
+                            success=False,
+                            data={
+                                "message": f"文件下载失败: {result.get('message', 'Unknown error')}",
+                                "error": result.get("error")
+                            }
+                        )
+                else:
+                    error_text = resp.text
+                    return ToolResult(
+                        success=False,
+                        data={
+                            "message": f"沙箱下载失败，状态码: {resp.status_code}",
+                            "error": error_text,
+                            "sandbox_url": sandbox_url
+                        }
+                    )
+                    
+        except Exception as e:
+            return ToolResult(
+                success=False,
+                data={
+                    "message": f"下载文件到沙箱时发生错误: {str(e)}",
                     "error_type": type(e).__name__
                 }
             ) 
