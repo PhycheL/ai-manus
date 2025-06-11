@@ -52,6 +52,14 @@ class FileSyncRequest(BaseModel):
     metadata: Optional[Dict[str, Any]] = Field(default=None, description="元数据")
 
 
+class FileDownloadRequest(BaseModel):
+    """文件下载请求"""
+    download_url: str = Field(..., description="后端文件下载URL")
+    file_id: str = Field(..., description="文件ID")
+    filename: str = Field(..., description="文件名")
+    target_path: Optional[str] = Field(default="/home/ubuntu/", description="目标路径")
+
+
 @router.post("/process")
 async def process_file(request: FileProcessRequest) -> FileProcessResponse:
     """
@@ -235,6 +243,59 @@ async def sync_to_backend(request: FileSyncRequest) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Error syncing file to backend: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/download-from-backend")
+async def download_from_backend(request: FileDownloadRequest) -> Dict[str, Any]:
+    """
+    从后端下载文件到沙箱
+    """
+    try:
+        # 确保目标路径存在
+        target_dir = request.target_path.rstrip('/')
+        os.makedirs(target_dir, exist_ok=True)
+        
+        # 构建完整的文件路径
+        file_path = os.path.join(target_dir, request.filename)
+        
+        # 从后端下载文件
+        async with aiohttp.ClientSession() as session:
+            async with session.get(request.download_url) as resp:
+                if resp.status == 200:
+                    # 保存文件到本地
+                    async with aiofiles.open(file_path, 'wb') as f:
+                        async for chunk in resp.content.iter_chunked(8192):
+                            await f.write(chunk)
+                    
+                    # 获取文件大小
+                    file_size = os.path.getsize(file_path)
+                    
+                    logger.info(f"Downloaded file from backend to: {file_path}")
+                    
+                    return {
+                        "success": True,
+                        "message": f"文件 {request.filename} 下载成功",
+                        "data": {
+                            "file_path": file_path,
+                            "filename": request.filename,
+                            "file_id": request.file_id,
+                            "file_size": file_size,
+                            "target_path": target_dir
+                        }
+                    }
+                else:
+                    raise HTTPException(
+                        status_code=resp.status,
+                        detail=f"Failed to download file from backend: HTTP {resp.status}"
+                    )
+        
+    except Exception as e:
+        logger.error(f"Error downloading file from backend: {str(e)}")
+        return {
+            "success": False,
+            "message": f"下载文件失败: {str(e)}",
+            "error": str(e)
+        }
 
 
 # 辅助函数
