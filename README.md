@@ -61,7 +61,7 @@ https://github.com/user-attachments/assets/37060a09-c647-4bcb-920c-959f7fa73ebe
 4. During processing, the PlanAct Agent calls relevant tools to complete tasks.
 5. All events generated during Agent processing are sent back to Web via SSE.
 
-**When users browse tools:**
+**When users browse tools: **
 
 - Browser:
     1. The Sandbox's headless browser starts a VNC service through xvfb and x11vnc, and converts VNC to websocket through websockify.
