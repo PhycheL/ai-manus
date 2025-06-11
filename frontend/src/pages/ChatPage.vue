@@ -43,7 +43,7 @@
           </button>
           <PlanPanel :plan="plan" />
         </template>
-        <ChatBox v-model="inputMessage" :rows="1" @submit="chat(inputMessage)" :isRunning="isLoading" @stop="handleStop" @files-selected="handleFilesSelected" />
+        <ChatBox v-model="inputMessage" :rows="1" @submit="handleChatSubmit" :isRunning="isLoading" @stop="handleStop" :showFileUpload="false" />
       </div>
     </div>
     <ToolPanel ref="toolPanel" :size="toolPanelSize" :sessionId="sessionId" :realTime="realTime" @jumpToRealTime="jumpToRealTime" />
@@ -405,63 +405,24 @@ const handleStop = () => {
   }
 }
 
-const handleFilesSelected = async (files: File[]) => {
-  console.log('选择的文件:', files);
-  
-  try {
-    // 显示上传进度（可以考虑添加加载状态）
-    console.log('开始上传文件...');
-    
-    // 调用文件上传API，传递当前会话ID
-    const uploadResults = await agentApi.uploadFiles(files, sessionId.value);
-    
-    // 上传成功
-    console.log('文件上传成功:', uploadResults);
-    
-    // 显示成功提示
-    for (const result of uploadResults) {
-      console.log(`✅ 文件 ${result.filename} 上传成功，文件ID: ${result.file_id}`);
-    }
-    
-    // 构建详细的上传成功消息，包含文件ID信息
-    const fileDetails = uploadResults.map(r => `${r.filename} (ID: ${r.file_id})`).join(', ');
-    const uploadMessage = `已成功上传 ${uploadResults.length} 个文件：${fileDetails}`;
-    
-    // 添加系统消息到对话中
+const handleChatSubmit = (data: { message: string; files?: File[] }) => {
+  // 在 ChatPage 中，我们只处理消息发送，文件上传应该在 HomePage 中处理
+  // 如果有文件，显示错误提示，因为在聊天过程中不应该再上传文件
+  if (data.files && data.files.length > 0) {
     messages.value.push({
       type: 'assistant',
       content: {
-        content: uploadMessage,
+        content: '在聊天过程中暂不支持文件上传，请在新对话中上传文件。',
         timestamp: Math.floor(Date.now() / 1000)
       } as MessageContent,
     });
-    
-    // 自动发送一个包含文件ID的分析请求给大模型
-    if (uploadResults.length > 0) {
-      const analysisMessage = `请分析刚刚上传的文件。文件信息：${uploadResults.map(r => `文件名: ${r.filename}, 文件ID: ${r.file_id}`).join('; ')}`;
-      
-      // 发送分析请求
-      setTimeout(() => {
-        chat(analysisMessage);
-      }, 1000); // 延迟1秒发送，让用户看到上传成功消息
-    }
-    
-  } catch (error) {
-    console.error('文件上传失败:', error);
-    
-    // 显示错误提示
-    const errorMessage = `文件上传失败: ${error instanceof Error ? error.message : '未知错误'}`;
-    
-    // 添加错误消息到对话中
-    messages.value.push({
-      type: 'assistant',
-      content: {
-        content: errorMessage,
-        timestamp: Math.floor(Date.now() / 1000)
-      } as MessageContent,
-    });
+    return;
   }
+  
+  chat(data.message);
 }
+
+
 </script>
 
 <style scoped>

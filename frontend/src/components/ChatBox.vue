@@ -14,6 +14,7 @@
             <footer class="flex flex-row justify-between w-full px-3">
                 <div class="flex gap-2 pr-2 items-center">
                     <button
+                        v-if="showFileUpload !== false"
                         @click="triggerFileUpload"
                         class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                         title="上传文件"
@@ -72,11 +73,12 @@ const props = defineProps<{
     modelValue: string;
     rows: number;
     isRunning: boolean;
+    showFileUpload?: boolean;
 }>();
 
 const emit = defineEmits<{
     (e: 'update:modelValue', value: string): void;
-    (e: 'submit'): void;
+    (e: 'submit', data: { message: string; files?: File[] }): void;
     (e: 'stop'): void;
     (e: 'files-selected', files: File[]): void;
 }>();
@@ -95,8 +97,19 @@ const handleEnterKeydown = (event: KeyboardEvent) => {
 };
 
 const handleSubmit = () => {
-    if (!hasTextInput.value) return;
-    emit('submit');
+    if (!hasTextInput.value && selectedFiles.value.length === 0) return;
+    
+    // 发送消息和文件信息
+    emit('submit', { 
+        message: props.modelValue, 
+        files: selectedFiles.value.length > 0 ? selectedFiles.value : undefined 
+    });
+    
+    // 清空文件选择
+    selectedFiles.value = [];
+    if (fileInput.value) {
+        fileInput.value.value = '';
+    }
 };
 
 const handleStop = () => {
@@ -116,6 +129,11 @@ const handleFileChange = (event: Event) => {
 };
 
 watch(() => props.modelValue, (value) => {
-    hasTextInput.value = value.trim() !== '';
+    hasTextInput.value = value.trim() !== '' || selectedFiles.value.length > 0;
+});
+
+// 监听文件选择变化
+watch(() => selectedFiles.value, () => {
+    hasTextInput.value = props.modelValue.trim() !== '' || selectedFiles.value.length > 0;
 });
 </script>
