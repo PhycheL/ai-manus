@@ -309,7 +309,7 @@ async def sync_from_sandbox(
             metadata=request.metadata
         )
         
-        download_url = f"/api/v1/files/{file_id}/download"
+        download_url = f"/api/v1/sessions/{request.session_id}/files/{file_id}/download"
         
         return APIResponse.success(
             FileSyncResponse(

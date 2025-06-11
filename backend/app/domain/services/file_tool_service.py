@@ -56,8 +56,8 @@ class FileContentTool:
             
             # 如果没有缓存的文本内容，则处理文件
             if self.file_processor:
-                logger.info(f"Processing file {file_id} to extract text")
-                download_url = f"/api/v1/files/{file_id}/download"
+                logger.info(f"Processing file {session_id}: {file_id} to extract text")
+                download_url = f"/api/v1/sessions/{session_id}/files/{file_id}/download"
                 
                 process_result = await self.file_processor.process_file(
                     download_url=download_url,

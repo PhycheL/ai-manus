@@ -65,17 +65,26 @@ class UserFilesTool(BaseTool):
         current_session_id = session_id or self.session_id
         
         try:
-            # 构建查询参数
+                        # 如果没有session_id，无法进行搜索
+            if not current_session_id or current_session_id in ['current', 'current-session', 'unknown-session']:
+                return ToolResult(
+                    success=False,
+                    data={
+                        "message": f"无法搜索文件：无效的会话ID '{current_session_id}'",
+                        "suggestion": "请提供有效的会话ID或确保工具已正确初始化",
+                        "provided_session_id": current_session_id,
+                        "tool_session_id": self.session_id
+                    }
+                )
+                
+            # 构建查询参数（不包含session_id，因为它在URL路径中）
             params = {
                 "q": filename,
                 "limit": limit or 10
             }
-            
-            if current_session_id:
-                params["session_id"] = current_session_id
                 
             # 先尝试搜索文件
-            search_url = f"{self.backend_url}/api/v1/files/search"
+            search_url = f"{self.backend_url}/api/v1/sessions/{current_session_id}/files/search"
             
             async with httpx.AsyncClient() as client:
                 resp = await client.get(search_url, params=params)
@@ -116,8 +125,8 @@ class UserFilesTool(BaseTool):
                         else:
                             # 没有找到文件，尝试获取会话的文件历史
                             if current_session_id:
-                                history_url = f"{self.backend_url}/sessions/{current_session_id}/history"
-                                history_params = {"session_id": current_session_id, "limit": 20}
+                                history_url = f"{self.backend_url}/api/v1/sessions/{current_session_id}/history"
+                                history_params = {"limit": 20}
                                 
                                 resp = await client.get(history_url, params=history_params)
                                 if resp.status_code == 200:
@@ -226,9 +235,19 @@ class UserFilesTool(BaseTool):
             会话中的文件列表
         """
         try:
-            history_url = f"{self.backend_url}/sessions/{session_id}/history"
+            # 检查session_id是否有效
+            if not session_id or session_id in ['current', 'current-session', 'unknown-session']:
+                return ToolResult(
+                    success=False,
+                    data={
+                        "message": f"无法获取文件：无效的会话ID '{session_id}'",
+                        "suggestion": "请提供有效的会话ID",
+                        "provided_session_id": session_id
+                    }
+                )
+                
+            history_url = f"{self.backend_url}/api/v1/sessions/{session_id}/history"
             params = {
-                "session_id": session_id,
                 "limit": limit or 20
             }
             

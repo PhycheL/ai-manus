@@ -146,6 +146,7 @@ async def download_file(path: str) -> FileResponse:
     从沙盒下载文件
     """
     try:
+        print("--------------------sandbox download------------------")
         file_path = os.path.join(WORKSPACE_DIR, path)
         
         if not os.path.exists(file_path):

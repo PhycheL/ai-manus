@@ -44,7 +44,7 @@ class FileInfo:
         self.file_size = file.file_size
         self.content_type = file.content_type
         self.upload_time = file.upload_time
-        self.download_url = f"/sessions/{file.session_id}/files/{file.id}/download"
+        self.download_url = f"/api/v1/sessions/{file.session_id}/files/{file.id}/download"
         self.file_type = file.file_type
         self.processing_status = file.processing_status
         self.tags = file.tags
@@ -132,7 +132,7 @@ class FileService:
             return FileUploadResponse(
                 file_id=file_id,
                 filename=file_info.filename,
-                download_url=f"/sessions/{session_id}/files/{file_id}/download",
+                download_url=f"/api/v1/sessions/{session_id}/files/{file_id}/download",
                 file_size=file_info.file_size,
                 upload_time=file_info.upload_time
             )
@@ -390,7 +390,7 @@ class FileService:
             )
             
             # 处理文件
-            download_url = f"/sessions/{file.session_id}/files/{file_id}/download"
+            download_url = f"/api/v1/sessions/{file.session_id}/files/{file_id}/download"
             result = await self.file_processor.process_file(
                 download_url=download_url,
                 file_id=file_id,
