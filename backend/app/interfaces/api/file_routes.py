@@ -89,6 +89,8 @@ async def download_file(
     返回文件流，支持断点续传
     """
     try:
+
+        print(f"---------------------------------Downloading file: {file_id}")
         # 获取文件流
         file_stream, filename, content_type = await file_service.get_file_stream(file_id)
         
