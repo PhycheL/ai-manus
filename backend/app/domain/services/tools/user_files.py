@@ -368,7 +368,7 @@ class UserFilesTool(BaseTool):
         """
         try:
             # 调用沙盒API处理文件
-            sandbox_url = "http://172.18.0.5:8080/api/v1/files/process"
+            sandbox_url = "http://sandbox:8080/api/v1/files/process"
             
             payload = {
                 "download_url": download_url,
@@ -469,7 +469,7 @@ class UserFilesTool(BaseTool):
             target_path = target_path or "/home/ubuntu/"
             
             # 调用沙箱API下载文件
-            sandbox_url = "http://172.18.0.5:8080/api/v1/files/download-from-backend"
+            sandbox_url = "http://sandbox:8080/api/v1/files/download-from-backend"
             
             payload = {
                 "download_url": download_url,
