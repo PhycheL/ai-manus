@@ -77,9 +77,9 @@ watch(shellSessionId, (newVal) => {
 onMounted(() => {
   loadShellContent();
   // 暂时禁用定时刷新以减少心跳请求
-  // refreshInterval.value = window.setInterval(() => {
-  //   loadShellContent();
-  // }, 5000);
+  refreshInterval.value = window.setInterval(() => {
+    loadShellContent();
+  }, 5000);
 });
 
 // Clear timer when component is unmounted
