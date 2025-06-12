@@ -14,7 +14,6 @@
             <footer class="flex flex-row justify-between w-full px-3">
                 <div class="flex gap-2 pr-2 items-center">
                     <button
-                        v-if="showFileUpload !== false"
                         @click="triggerFileUpload"
                         class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                         title="上传文件"
