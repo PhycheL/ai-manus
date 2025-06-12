@@ -107,6 +107,12 @@ import { API_CONFIG } from '../api/client'
 
 export default {
   name: 'FileUpload',
+  props: {
+    sessionId: {
+      type: String,
+      required: true
+    }
+  },
   emits: ['file-uploaded', 'file-selected', 'file-analyzed'],
   setup(props, { emit }) {
     const isDragOver = ref(false)
@@ -207,7 +213,6 @@ export default {
       
       try {
         const backendUrl = getBackendUrl()
-        const sessionId = 'current-session'
         
         for (let i = 0; i < files.length; i++) {
           const file = files[i]
@@ -215,7 +220,7 @@ export default {
           formData.append('file', file)
           
           const response = await axios.post(
-            `${backendUrl}/sessions/${sessionId}/files/upload`,
+            `${backendUrl}/sessions/${props.sessionId}/files/upload`,
             formData,
             {
               headers: {
@@ -257,9 +262,8 @@ export default {
     const deleteFile = async (fileId) => {
       try {
         const backendUrl = getBackendUrl()
-        const sessionId = 'current-session'
         
-        const response = await axios.delete(`${backendUrl}/sessions/${sessionId}/files/batch`, {
+        const response = await axios.delete(`${backendUrl}/sessions/${props.sessionId}/files/batch`, {
           data: {
             file_ids: [fileId]
           }
@@ -280,8 +284,7 @@ export default {
     const loadUploadedFiles = async () => {
       try {
         const backendUrl = getBackendUrl()
-        const sessionId = 'current-session'
-        const response = await axios.get(`${backendUrl}/sessions/${sessionId}/history`)
+        const response = await axios.get(`${backendUrl}/sessions/${props.sessionId}/history`)
         
         if (response.data.success) {
           uploadedFiles.value = response.data.data.files || []
@@ -321,7 +324,6 @@ export default {
     const analyzeUnknownFileType = async (fileId) => {
       try {
         const backendUrl = getBackendUrl()
-        const sessionId = 'current-session'
         
         const file = uploadedFiles.value.find(f => f.file_id === fileId)
         if (file) {
@@ -329,7 +331,7 @@ export default {
         }
         
         const response = await axios.post(
-          `${backendUrl}/sessions/${sessionId}/files/${fileId}/analyze-unknown-type`
+          `${backendUrl}/sessions/${props.sessionId}/files/${fileId}/analyze-unknown-type`
         )
         
         if (response.data.success) {
