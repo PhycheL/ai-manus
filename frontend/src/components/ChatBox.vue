@@ -14,7 +14,6 @@
             <footer class="flex flex-row justify-between w-full px-3">
                 <div class="flex gap-2 pr-2 items-center">
                     <button
-                        v-if="showFileUpload !== false"
                         @click="triggerFileUpload"
                         class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                         title="上传文件"
@@ -54,6 +53,13 @@
                     </button>
                 </div>
             </footer>
+            <FileUpload
+                v-if="showFileUpload"
+                :sessionId="sessionId"
+                @file-uploaded="handleFileUploaded"
+                @file-selected="handleFileSelected"
+                @file-analyzed="handleFileAnalyzed"
+            />
         </div>
     </div>
 </template>
@@ -62,6 +68,7 @@
 import { ref, watch } from 'vue';
 import SendIcon from './icons/SendIcon.vue';
 import { useI18n } from 'vue-i18n';
+import FileUpload from './FileUpload.vue';
 
 const { t } = useI18n();
 const hasTextInput = ref(false);
@@ -74,6 +81,7 @@ const props = defineProps<{
     rows: number;
     isRunning: boolean;
     showFileUpload?: boolean;
+    sessionId: string;
 }>();
 
 const emit = defineEmits<{
@@ -81,6 +89,9 @@ const emit = defineEmits<{
     (e: 'submit', data: { message: string; files?: File[] }): void;
     (e: 'stop'): void;
     (e: 'files-selected', files: File[]): void;
+    (e: 'file-uploaded', file: File): void;
+    (e: 'file-selected', file: File): void;
+    (e: 'file-analyzed', analysis: any): void;
 }>();
 
 const handleEnterKeydown = (event: KeyboardEvent) => {
@@ -126,6 +137,18 @@ const handleFileChange = (event: Event) => {
         selectedFiles.value = Array.from(target.files);
         emit('files-selected', selectedFiles.value);
     }
+};
+
+const handleFileUploaded = (file: File) => {
+    emit('file-uploaded', file);
+};
+
+const handleFileSelected = (file: File) => {
+    emit('file-selected', file);
+};
+
+const handleFileAnalyzed = (analysis: any) => {
+    emit('file-analyzed', analysis);
 };
 
 watch(() => props.modelValue, (value) => {

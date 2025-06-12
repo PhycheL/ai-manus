@@ -43,7 +43,15 @@
           </button>
           <PlanPanel :plan="plan" />
         </template>
-        <ChatBox v-model="inputMessage" :rows="1" @submit="handleChatSubmit" :isRunning="isLoading" @stop="handleStop" :showFileUpload="false" />
+        <ChatBox
+          v-model="inputMessage"
+          :rows="2"
+          :isRunning="isLoading"
+          :sessionId="sessionId"
+          @submit="handleChatSubmit"
+          @stop="handleStop"
+          :showFileUpload="false"
+        />
       </div>
     </div>
     <ToolPanel ref="toolPanel" :size="toolPanelSize" :sessionId="sessionId" :realTime="realTime" @jumpToRealTime="jumpToRealTime" />
@@ -405,21 +413,41 @@ const handleStop = () => {
   }
 }
 
-const handleChatSubmit = (data: { message: string; files?: File[] }) => {
-  // 在 ChatPage 中，我们只处理消息发送，文件上传应该在 HomePage 中处理
-  // 如果有文件，显示错误提示，因为在聊天过程中不应该再上传文件
-  if (data.files && data.files.length > 0) {
-    messages.value.push({
-      type: 'assistant',
-      content: {
-        content: '在聊天过程中暂不支持文件上传，请在新对话中上传文件。',
-        timestamp: Math.floor(Date.now() / 1000)
-      } as MessageContent,
-    });
-    return;
+const handleChatSubmit = async (data: { message: string; files?: File[] }) => {
+  try {
+    // 如果有文件，先上传文件
+    if (data.files && data.files.length > 0) {
+      try {
+        // 确保使用当前会话ID
+        if (!sessionId.value) {
+          showErrorToast('会话ID不存在，请刷新页面重试');
+          return;
+        }
+
+        const uploadResults = await agentApi.uploadFiles(data.files, sessionId.value);
+        console.log('文件上传成功:', uploadResults);
+        
+        // 构建包含文件信息的消息
+        const fileDetails = uploadResults.map(r => `${r.filename} (ID: ${r.file_id})`).join(', ');
+        const messageWithFiles = data.message.trim() 
+          ? `${data.message}\n\n已上传文件：${fileDetails}`
+          : `请分析刚刚上传的文件。文件信息：${uploadResults.map(r => `文件名: ${r.filename}, 文件ID: ${r.file_id}`).join('; ')}`;
+
+        // 发送包含文件信息的消息
+        chat(messageWithFiles);
+      } catch (uploadError) {
+        console.error('文件上传失败:', uploadError);
+        showErrorToast(`文件上传失败: ${uploadError instanceof Error ? uploadError.message : '未知错误'}`);
+        return;
+      }
+    } else {
+      // 发送普通消息
+      chat(data.message);
+    }
+  } catch (error) {
+    console.error('发送消息失败:', error);
+    showErrorToast(`发送消息失败: ${error instanceof Error ? error.message : '未知错误'}`);
   }
-  
-  chat(data.message);
 }
 
 
