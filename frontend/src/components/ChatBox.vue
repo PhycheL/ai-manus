@@ -27,7 +27,7 @@
                         ref="fileInput"
                         type="file" 
                         multiple 
-                        accept=".txt,.csv,.json,.pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.py,.js,.html,.css,.java,.cpp,.c,.xml,.md"
+                        accept="*"
                         @change="handleFileChange"
                         class="hidden"
                     />

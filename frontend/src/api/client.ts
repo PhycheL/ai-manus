@@ -3,7 +3,7 @@ import axios, { AxiosError } from 'axios';
 
 // API configuration
 export const API_CONFIG = {
-  host: 'http://localhost:8000',
+  host: import.meta.env.VITE_API_URL || '', // 优先使用环境变量，否则使用相对路径让 Nginx 代理处理
   version: 'v1',
   timeout: 30000, // Request timeout in milliseconds
 };
