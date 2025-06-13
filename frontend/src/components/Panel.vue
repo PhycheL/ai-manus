@@ -131,7 +131,7 @@ onMounted(async () => {
   // Set up timer to update sessions every second
   // TODO: use websocket to update sessions
   // 停止心跳连接，方便测试
-  //updateTimer = setInterval(fetchSessions, 1000)
+  updateTimer = setInterval(fetchSessions, 1000)
 
   // Add keyboard event listener
   window.addEventListener('keydown', handleKeydown)
