@@ -72,7 +72,7 @@ class Settings(BaseSettings):
     google_search_engine_id: str | None = None
     
     # File upload configuration
-    max_file_size: int = 50 * 1024 * 1024  # 50MB
+    max_file_size: int = 200 * 1024 * 1024  # 200MB
     # 捕获可能存在的环境变量，但不使用它
     allowed_file_types_env: str | None = Field(default=None, alias="allowed_file_types")
     file_retention_days: int = 30

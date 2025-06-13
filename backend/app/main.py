@@ -3,6 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
 import asyncio
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import Response
+import json
 
 from app.interfaces.api.routes import router
 from app.application.services.agent_service import AgentService
@@ -125,9 +129,19 @@ async def lifespan(app: FastAPI):
         await get_redis().shutdown()
         await shutdown()
 
+class LargeFileUploadMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if request.url.path.endswith("/upload"):
+            # 增加请求体大小限制
+            request._body_size_limit = 200 * 1024 * 1024  # 200MB
+        return await call_next(request)
+
 app = FastAPI(title="Manus AI Agent", lifespan=lifespan, timeout_graceful_shutdown=5)
 app.dependency_overrides[get_agent_service] = lambda: agent_service
 app.dependency_overrides[get_file_service] = get_file_service_instance
+
+# 添加大文件上传中间件
+app.add_middleware(LargeFileUploadMiddleware)
 
 # Configure CORS
 app.add_middleware(

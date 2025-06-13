@@ -179,6 +179,12 @@ export interface ListFilesResponse {
  */
 export async function uploadFiles(files: File[], sessionId?: string): Promise<UploadFileResponse[]> {
   const uploadPromises = files.map(async (file) => {
+    // 检查文件大小
+    const maxFileSize = 100 * 1024 * 1024; // 100MB
+    if (file.size > maxFileSize) {
+      throw new Error(`文件 "${file.name}" 超过 100MB 大小限制`);
+    }
+
     const formData = new FormData();
     formData.append('file', file);
     
@@ -189,6 +195,8 @@ export async function uploadFiles(files: File[], sessionId?: string): Promise<Up
     const response = await fetch(`${BASE_URL}/sessions/${currentSessionId}/files/upload`, {
       method: 'POST',
       body: formData,
+      // 设置较长的超时时间
+      signal: AbortSignal.timeout(300000), // 5分钟超时
     });
 
     if (!response.ok) {

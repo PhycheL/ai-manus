@@ -1,5 +1,16 @@
 <template>
   <div class="file-upload-container">
+    <!-- Toast 提示 -->
+    <div v-if="showToast" class="toast" :class="{ 'toast-show': showToast }">
+      <div class="toast-content">
+        <svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+        </svg>
+        <span>{{ toastMessage }}</span>
+      </div>
+      <button class="toast-close" @click="closeToast">×</button>
+    </div>
+
     <!-- 上传区域 -->
     <div 
       class="upload-area"
@@ -27,7 +38,7 @@
           </p>
           <p v-else class="primary-text">正在上传文件...</p>
           <p class="secondary-text">
-            支持所有文件格式（包括未知类型），最大 50MB
+            支持所有文件格式（包括未知类型），最大 100MB
           </p>
         </div>
       </div>
@@ -121,16 +132,41 @@ export default {
     const errorMessage = ref('')
     const uploadedFiles = ref([])
     const fileInput = ref(null)
+    const showToast = ref(false)
+    const toastMessage = ref('')
+    let toastTimer = null
     
     // 支持的文件类型
     const acceptedTypes = '.txt,.csv,.json,.pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.py,.js,.html,.css,.java,.cpp,.c,.xml,.md'
     
-    // 最大文件大小 (50MB)
-    const maxFileSize = 50 * 1024 * 1024
+    // 最大文件大小 (100MB)
+    const maxFileSize = 100 * 1024 * 1024
     
     // 获取后端地址
     const getBackendUrl = () => {
       return API_CONFIG.host || 'http://localhost:8000'
+    }
+    
+    // 显示 Toast
+    const showToastMessage = (message) => {
+      showToast.value = true
+      toastMessage.value = message
+      
+      // 3秒后自动关闭
+      if (toastTimer) {
+        clearTimeout(toastTimer)
+      }
+      toastTimer = setTimeout(() => {
+        showToast.value = false
+      }, 3000)
+    }
+    
+    // 关闭 Toast
+    const closeToast = () => {
+      showToast.value = false
+      if (toastTimer) {
+        clearTimeout(toastTimer)
+      }
     }
     
     // 触发文件选择
@@ -172,7 +208,8 @@ export default {
     // 验证文件
     const validateFile = (file) => {
       if (file.size > maxFileSize) {
-        return `文件 "${file.name}" 超过 50MB 大小限制`
+        showToastMessage(`文件 "${file.name}" 超过 100MB 大小限制`)
+        return `文件 "${file.name}" 超过 100MB 大小限制`
       }
       
       // 已知支持的文件扩展名
@@ -431,6 +468,10 @@ export default {
       uploadedFiles,
       fileInput,
       acceptedTypes,
+      showToast,
+      toastMessage,
+      showToastMessage,
+      closeToast,
       triggerFileSelect,
       handleDragOver,
       handleDragLeave,
@@ -645,5 +686,58 @@ export default {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
+}
+
+/* Toast 样式 */
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transform: translateX(120%);
+  transition: transform 0.3s ease;
+  z-index: 1000;
+}
+
+.toast-show {
+  transform: translateX(0);
+}
+
+.toast-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #374151;
+}
+
+.toast-icon {
+  width: 20px;
+  height: 20px;
+  color: #ef4444;
+  flex-shrink: 0;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 4px;
+  font-size: 18px;
+  line-height: 1;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.toast-close:hover {
+  background-color: #f3f4f6;
+  color: #374151;
 }
 </style> 

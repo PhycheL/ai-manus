@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, UploadFile, File, Form, Query, Response
 from fastapi.responses import StreamingResponse
 from typing import List, Optional, Dict, Any
 import logging
+from urllib.parse import quote
 
 from app.application.services.file_service import FileService
 from app.interfaces.schemas.response import APIResponse
@@ -90,17 +91,19 @@ async def download_file(
     返回文件流，支持断点续传
     """
     try:
-
         print(f"---------------------------------Downloading file: {file_id}")
         # 获取文件流
         file_stream, filename, content_type = await file_service.get_file_stream(file_id)
+        
+        # URL 编码文件名
+        encoded_filename = quote(filename)
         
         # 返回流式响应
         return StreamingResponse(
             file_stream,
             media_type=content_type,
             headers={
-                "Content-Disposition": f'attachment; filename="{filename}"',
+                "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}",
                 "Cache-Control": "public, max-age=3600"
             }
         )
