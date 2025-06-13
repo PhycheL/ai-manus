@@ -53,13 +53,6 @@
                     </button>
                 </div>
             </footer>
-            <FileUpload
-                v-if="showFileUpload"
-                :sessionId="sessionId"
-                @file-uploaded="handleFileUploaded"
-                @file-selected="handleFileSelected"
-                @file-analyzed="handleFileAnalyzed"
-            />
         </div>
     </div>
 </template>
@@ -68,7 +61,6 @@
 import { ref, watch } from 'vue';
 import SendIcon from './icons/SendIcon.vue';
 import { useI18n } from 'vue-i18n';
-import FileUpload from './FileUpload.vue';
 
 const { t } = useI18n();
 const hasTextInput = ref(false);
@@ -137,18 +129,6 @@ const handleFileChange = (event: Event) => {
         selectedFiles.value = Array.from(target.files);
         emit('files-selected', selectedFiles.value);
     }
-};
-
-const handleFileUploaded = (file: File) => {
-    emit('file-uploaded', file);
-};
-
-const handleFileSelected = (file: File) => {
-    emit('file-selected', file);
-};
-
-const handleFileAnalyzed = (analysis: any) => {
-    emit('file-analyzed', analysis);
 };
 
 watch(() => props.modelValue, (value) => {
